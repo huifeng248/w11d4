@@ -13,8 +13,9 @@ router.get('/', async (req, res, next) => {
     // Phase 2A: Use query params for page & size
     // Your code here
     const pagination = {}
-    let {page, size} = req.query
-    console.log(req.query)
+    console.log(req.query);
+    let {page, size, leftHanded, rightHanded, lastName} = req.query
+
     page = page === undefined ? 1 : parseInt(page)
     size = size === undefined ? 10 : parseInt(size)
 
@@ -22,13 +23,14 @@ router.get('/', async (req, res, next) => {
         pagination.limit = size
         pagination.offset = (page -1) * size
         } else if (!(page === 0 && size === 0)) {
-        errorResult.errors.push({ message: 'Requires valid page and size params' })
+        errorResult.errors.push({ message: 'Requires valid page and size params' });
+        errorResult.count = 267;
         // res.status(400)
         res.statusCode= 400
         res.json(errorResult)
     }
-    
-    
+
+
 
     // Phase 2B: Calculate limit and offset
     // Phase 2B (optional): Special case to return all students (page=0, size=0)
@@ -86,6 +88,43 @@ router.get('/', async (req, res, next) => {
     // Phase 3A: Include total number of results returned from the query without
         // limits and offsets as a property of count on the result
         // Note: This should be a new query
+        // let count;
+        // console.log(leftHanded);
+        // if (leftHanded === 'true') {
+
+        //    count = await Student.count({where: {leftHanded : true}});
+        //    result.count = count;
+        // }
+        // if (rightHanded === 'true' || leftHanded === 'false') {
+
+        //     count = await Student.count({where: {leftHanded : false}});
+        //     result.count = count;
+        //  }
+        //  if (lastName) {
+
+        //     count = await Student.count({where: {lastName}});
+        //     result.count = count;
+        //  } else {
+        //     result.count = await Student.count();
+        //  }
+
+
+        if (leftHanded === 'true') {
+            where.leftHanded = true;
+        }
+        if (rightHanded === 'true') {
+            where.leftHanded = false;
+        }
+        if (lastName) {
+            where.lastName = lastName;
+        }
+        result.count = await Student.count({where});
+        if (Object.keys(where).length === 0) {
+           errorResult.count = result.count;
+           errorResult.errors.push({ message: 'Requires valid params' });
+           res.statusCode= 400
+           res.json(errorResult)
+        }
 
     result.rows = await Student.findAll({
         attributes: ['id', 'firstName', 'lastName', 'leftHanded'],
@@ -106,12 +145,12 @@ router.get('/', async (req, res, next) => {
             }
         */
     // Your code here
-        if (page === 0){
+        if (page === 0) {
             result.page = 1
         } else {
             result.page = page
         }
-    
+
 
     // Phase 3B:
         // Include the total number of available pages for this query as a key
@@ -128,6 +167,8 @@ router.get('/', async (req, res, next) => {
             }
         */
     // Your code here
+    const pageCount = Math.ceil(result.count / size);
+    result.pageCount = pageCount;
 
     res.json(result);
 });
